@@ -13,6 +13,14 @@ The aim is to only use this tool when learning and still have typical "Iron Man"
   - If you checked out the source, this can just be done with `dotnet run` from the `CDDABackup` project 
   directory
   - If you downloaded a built version, run the executable/equivalent for your OS
+- Play CDDA!
+  - As long CDDABackup is running, it will generate a backup after every save.
+
+### Where is my CDDA Save Directory?
+
+This will depend entirely on where you installed the game. If you installed it manually, find the path to your installation folder - or look at your CDDA shortcut to see where it goes. It is then the `save` directory in your installation folder.
+
+If you used the CDDA Launcher, first navigate to where you installed the launcher, then go in the `cdda` folder and then `save`.
 
 ### Restoring a Save
 

@@ -10,6 +10,9 @@ The aim is to only use this tool when learning and still have typical "Iron Man"
 
 - Edit `appSettings.json` and change the value for `saveDirectory` which MUST be set to your CDDA Save directory. E.g. `C:\\CDDA Game Launcher\\cdda\\save`, this will vary based on where you installed it.
 - Run the application
+  - If you checked out the source, this can just be done with `dotnet run` from the `CDDABackup` project 
+  directory
+  - If you downloaded a built version, run the executable/equivalent for your OS
 
 ## Configuration
 - `saveDirectory` - The path to your CDDA save folder, also where the backups will be written.

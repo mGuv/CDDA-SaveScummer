@@ -14,6 +14,22 @@ The aim is to only use this tool when learning and still have typical "Iron Man"
   directory
   - If you downloaded a built version, run the executable/equivalent for your OS
 
+### Restoring a Save
+
+Currently the tool does not automatically restore saves for you. To restore a save:
+
+- FOLLOW THIS AT YOUR OWN RISK, any accidental deletion of saves/backups  is not the fault of CDDABackup
+- Go to your CDDA save directory
+- Look for a folder that matches the back up folder name, default is `CDDABackups`
+- Go in this folder and you should see lots of `.zip` files with names that match your saves
+- Copy the latest `.zip` (or whichever one you want) for your save, e.g. `MyWorld 2021-05-16 17-53.zip`
+- Go up a folder, i.e. back to your CDDA save directory
+- Go in to the matching save directory, e.g. `MyWorld`
+- Delete everything in this directory, WARNING: will delete current save!
+- Paste the `.zip` file here
+- Extract the contents of this zip folder directly to this directory (i.e. `Extract Here` from WinRAR)
+- It should look similar to how it did before (if it ended up in another folder, move the contents of that folder out)
+
 ## Configuration
 - `saveDirectory` - The path to your CDDA save folder, also where the backups will be written.
 - `backupFolderName` - The name of the folder the backups will be placed in, ensure it doesn't match one of your save names or that save will not get backed up.

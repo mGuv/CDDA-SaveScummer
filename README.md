@@ -1,10 +1,12 @@
-# CDDABackup
+# CDDA Save Scummer
 
 A lightweight tool that watches your CDDA save directory and makes a backup of every save.
 
 This is kind of cheating as CDDA is meant to be permadeath; However, as someone without the time to really dedicate myself to CDDA, this helps me to take risks to learn the outcomes of things without being too heavily penalised for making mistakes. 
 
 The aim is to only use this tool when learning and still have typical "Iron Man" saves by either disabling the tool or just not touching the backups.
+
+**Note:** Renamed from CDDABackup as it was confused with being a back up repo of CDDA. The internal name/project is still called CDDABackup until I fix that.
 
 ## Usage
 

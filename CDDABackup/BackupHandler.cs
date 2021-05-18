@@ -17,12 +17,12 @@ namespace CDDABackup
         /// The core CDDA directory where saves are written to
         /// </summary>
         private readonly string saveDirectory;
-        
+
         /// <summary>
-        /// The desired folder name to use to stash backups in
+        /// The directory path that backups are saved to
         /// </summary>
-        private readonly string backupDirectoryName;
-        
+        private readonly string backupDirectoryPath;
+
         /// <summary>
         /// The timestamp format to attach to each backup
         /// </summary>
@@ -38,7 +38,7 @@ namespace CDDABackup
         /// The amount of time to wait between updates, this is to avoid throttling on slower machines
         /// </summary>
         private readonly int timeBetweenUpdatesMilliseconds;
-        
+
         private Dictionary<string, DateTime> lastWritten = new Dictionary<string, DateTime>();
 
         /// <summary>
@@ -50,11 +50,11 @@ namespace CDDABackup
         {
             // Configure Handler
             this.saveDirectory = config["CDDABackup:saveDirectory"];
-            this.backupDirectoryName = saveDirectory + "\\" + config["CDDABackup:backupFolderName"];
+            this.backupDirectoryPath = saveDirectory + "\\" + config["CDDABackup:backupFolderName"];
             this.timestampFormat = config["CDDABackup:timestampFormat"];
             this.saveGracePeriodMilliseconds = int.Parse(config["CDDABackup:saveGracePeriodMilliseconds"]);
             this.timeBetweenUpdatesMilliseconds = int.Parse(config["CDDABackup:timeBetweenUpdatesMilliseconds"]);
-            
+
             // Check for invalid configuration
             if (this.saveDirectory.Length == 0)
             {
@@ -73,7 +73,7 @@ namespace CDDABackup
             try
             {
                 // Ensure backup directory exists
-                Directory.CreateDirectory(this.backupDirectoryName);
+                Directory.CreateDirectory(this.backupDirectoryPath);
 
                 // Watch Save Directory for changes
                 var dirWatcher = new FileSystemWatcher(this.saveDirectory);
@@ -95,24 +95,27 @@ namespace CDDABackup
                             continue;
                         }
 
-                        // Create backup path/name
-                        string saveName = kvp.Key.Substring(kvp.Key.LastIndexOf("\\") + 1);
+                        // Get original directory
+                        DirectoryInfo sourceDirectory = new DirectoryInfo(kvp.Key);
+
+                        // Build the Backup Name/Path
+                        string saveName = sourceDirectory.Name;
                         string backupName = $"{saveName} {now.ToString(timestampFormat)}";
-                        string backupPath = $"{this.backupDirectoryName}\\{backupName}";
+                        string backupPath = Path.Combine(this.backupDirectoryPath, backupName);
+
+                        // Ensure the back up directory exists
+                        DirectoryInfo targetDirectory = new DirectoryInfo(backupPath);
+                        Directory.CreateDirectory(targetDirectory.FullName);
 
                         // Do the backup
-                        Directory.CreateDirectory(backupPath);
-                        foreach (var file in Directory.GetFiles(kvp.Key))
-                        {
-                            File.Copy(file, file.Replace(kvp.Key, backupPath), false);
-                        }
+                        this.BackupFolder(sourceDirectory, targetDirectory);
 
                         // Zip it up and remove unzipped version
                         ZipFile.CreateFromDirectory(backupPath, backupPath + ".zip", CompressionLevel.Optimal, false);
                         Directory.Delete(backupPath, true);
 
                         Console.WriteLine($"Wrote backup: {backupPath + ".zip"}");
-                        
+
                         // Mark save as does not need processing
                         keysToRemove.Add(kvp.Key);
                     }
@@ -142,13 +145,34 @@ namespace CDDABackup
         {
             // Only mark actual saves
             string path = e.FullPath;
-            if (path == this.backupDirectoryName)
+            if (path == this.backupDirectoryPath)
             {
                 return;
             }
-            
+
             // Note the time we saw this update
             lastWritten[path] = DateTime.Now;
+        }
+
+        /// <summary>
+        /// Takes a given directory and writes an exact copy of all of its contents to the backup directory, recursively.
+        /// </summary>
+        /// <param name="sourceDirectory">The original Directory to Copy</param>
+        /// <param name="backupDirectory">The destination of the Copy</param>
+        private void BackupFolder(DirectoryInfo sourceDirectory, DirectoryInfo backupDirectory)
+        {
+            // Backup all the files
+            foreach (var file in sourceDirectory.GetFiles())
+            {
+                file.CopyTo(Path.Combine(backupDirectory.FullName, file.Name));
+            }
+
+            // Backup all the Directories
+            foreach (var directory in sourceDirectory.GetDirectories())
+            {
+                // Recursion isn't ideal but I highly doubt this will ever be nested enough to stack overflow
+                this.BackupFolder(directory, backupDirectory.CreateSubdirectory(directory.Name));
+            }
         }
     }
 }

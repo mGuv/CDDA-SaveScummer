@@ -5,13 +5,14 @@ using System.IO.Compression;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 
 namespace CDDABackup
 {
     /// <summary>
     /// Handler responsible for noticing changes to a save and writing a backup
     /// </summary>
-    public class BackupHandler
+    public class BackupHandler : BackgroundService
     {
         /// <summary>
         /// The core CDDA directory where saves are written to
@@ -41,13 +42,17 @@ namespace CDDABackup
 
         private Dictionary<string, DateTime> lastWritten = new Dictionary<string, DateTime>();
 
+        private IHostApplicationLifetime hostApplicationLifetime;
+
         /// <summary>
         /// Creates a new Backup Handler with the given config
         /// </summary>
         /// <param name="config">The configuration the Handler will pull values from</param>
         /// <exception cref="ApplicationException">Thrown when the application is not configured correctly</exception>
-        public BackupHandler(IConfiguration config)
+        public BackupHandler(IConfiguration config, IHostApplicationLifetime hostApplicationLifetime)
         {
+            this.hostApplicationLifetime = hostApplicationLifetime;
+            
             // Configure Handler
             this.saveDirectory = config["CDDABackup:saveDirectory"];
             this.backupDirectoryPath = saveDirectory + "\\" + config["CDDABackup:backupFolderName"];
@@ -64,11 +69,45 @@ namespace CDDABackup
         }
 
         /// <summary>
-        /// Run the main backup tasks until cancelled
+        /// Handler for when a file changes within a save directory
         /// </summary>
-        /// <param name="cancellationToken">The token that the Handler will watch for when it should stop</param>
-        /// <returns>Indefinite backup task that only stops once the token has been cancelled</returns>
-        public async Task RunAsync(CancellationToken cancellationToken)
+        /// <param name="sender">The event sender</param>
+        /// <param name="e">The event containing the file changed</param>
+        private void OnSaveChanged(object sender, FileSystemEventArgs e)
+        {
+            // Only mark actual saves
+            string path = e.FullPath;
+            if (path == this.backupDirectoryPath)
+            {
+                return;
+            }
+
+            // Note the time we saw this update
+            lastWritten[path] = DateTime.Now;
+        }
+
+        /// <summary>
+        /// Takes a given directory and writes an exact copy of all of its contents to the backup directory, recursively.
+        /// </summary>
+        /// <param name="sourceDirectory">The original Directory to Copy</param>
+        /// <param name="backupDirectory">The destination of the Copy</param>
+        private void BackupFolder(DirectoryInfo sourceDirectory, DirectoryInfo backupDirectory)
+        {
+            // Backup all the files
+            foreach (var file in sourceDirectory.GetFiles())
+            {
+                file.CopyTo(Path.Combine(backupDirectory.FullName, file.Name));
+            }
+
+            // Backup all the Directories
+            foreach (var directory in sourceDirectory.GetDirectories())
+            {
+                // Recursion isn't ideal but I highly doubt this will ever be nested enough to stack overflow
+                this.BackupFolder(directory, backupDirectory.CreateSubdirectory(directory.Name));
+            }
+        }
+        
+        private async Task RunBackups(CancellationToken stoppingToken)
         {
             try
             {
@@ -82,7 +121,7 @@ namespace CDDABackup
                 dirWatcher.Changed += OnSaveChanged;
 
                 // Run until cancelled
-                while (!cancellationToken.IsCancellationRequested)
+                while (!stoppingToken.IsCancellationRequested)
                 {
                     // Monitor for changes
                     HashSet<string> keysToRemove = new HashSet<string>();
@@ -136,43 +175,29 @@ namespace CDDABackup
             }
         }
 
-        /// <summary>
-        /// Handler for when a file changes within a save directory
-        /// </summary>
-        /// <param name="sender">The event sender</param>
-        /// <param name="e">The event containing the file changed</param>
-        private void OnSaveChanged(object sender, FileSystemEventArgs e)
+        protected  override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            // Only mark actual saves
-            string path = e.FullPath;
-            if (path == this.backupDirectoryPath)
-            {
-                return;
-            }
-
-            // Note the time we saw this update
-            lastWritten[path] = DateTime.Now;
-        }
-
-        /// <summary>
-        /// Takes a given directory and writes an exact copy of all of its contents to the backup directory, recursively.
-        /// </summary>
-        /// <param name="sourceDirectory">The original Directory to Copy</param>
-        /// <param name="backupDirectory">The destination of the Copy</param>
-        private void BackupFolder(DirectoryInfo sourceDirectory, DirectoryInfo backupDirectory)
-        {
-            // Backup all the files
-            foreach (var file in sourceDirectory.GetFiles())
-            {
-                file.CopyTo(Path.Combine(backupDirectory.FullName, file.Name));
-            }
-
-            // Backup all the Directories
-            foreach (var directory in sourceDirectory.GetDirectories())
-            {
-                // Recursion isn't ideal but I highly doubt this will ever be nested enough to stack overflow
-                this.BackupFolder(directory, backupDirectory.CreateSubdirectory(directory.Name));
-            }
+            // Write out fluffy intro
+            Console.WriteLine("[CDDA Backup Tool]");
+            Console.WriteLine("----------------");
+            Console.WriteLine("Press any key to stop.");
+            
+            await Task.WhenAny(
+                Task.Delay(-1, stoppingToken),
+                Task.WhenAll(
+                    Task.Run(() =>
+                    {
+                        Console.ReadKey();
+                        Console.WriteLine();
+                        Console.WriteLine("Shutting Down...");
+                        hostApplicationLifetime.StopApplication();
+                    }),
+                    this.RunBackups(stoppingToken)
+                )
+            );
+            
+            
+            Console.WriteLine("done");
         }
     }
 }

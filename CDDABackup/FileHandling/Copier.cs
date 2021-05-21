@@ -28,6 +28,7 @@ namespace CDDABackup.FileHandling
         /// </summary>
         /// <param name="from">The file to copy</param>
         /// <param name="to">The path to copy the file to</param>
+        /// <exception cref="ArgumentException">Thrown when the file to copy is not valid</exception>
         public void CopyFile(FileInfo from, string to)
         {
             // Ensure there's something to copy

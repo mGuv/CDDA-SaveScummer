@@ -37,7 +37,7 @@ namespace CDDABackup
                             // Run CDDA  core as a background service
                             .AddHostedService<BackupHandler>()
                             .AddTransient<SaveWatcher>()
-                            .AddScoped<Copier>()
+                            .AddSingleton<Copier>()
                             .AddOptions<ScummerSettings>().BindConfiguration("CDDABackup");
                     }
                 )

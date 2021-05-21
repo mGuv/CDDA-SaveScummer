@@ -1,13 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
-using Serilog;
 
 namespace CDDABackup
 {
@@ -34,18 +31,19 @@ namespace CDDABackup
         /// <summary>
         /// The Application control so we can gracefully request shutdown via user input
         /// </summary>
-        private IHostApplicationLifetime hostApplicationLifetime;
+        private readonly IHostApplicationLifetime hostApplicationLifetime;
 
         /// <summary>
         /// The Save Watcher utilised to trigger when a backup should happen
         /// </summary>
-        private SaveWatcher saveWatcher;
+        private readonly SaveWatcher saveWatcher;
 
         /// <summary>
         /// Creates a new Backup Handler with the given config
         /// </summary>
         /// <param name="config">The configuration the Handler will pull values from</param>
         /// <param name="hostApplicationLifetime">The application lifetime to call shutdown on when user requests</param>
+        /// <param name="saveWatcher">The Watcher that will be used to detect when a backup should be made</param>
         /// <exception cref="ApplicationException">Thrown when the application is not configured correctly</exception>
         public BackupHandler(IConfiguration config, IHostApplicationLifetime hostApplicationLifetime, SaveWatcher saveWatcher)
         {

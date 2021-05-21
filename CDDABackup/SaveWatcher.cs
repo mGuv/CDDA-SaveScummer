@@ -40,10 +40,11 @@ namespace CDDABackup
         }
 
         /// <summary>
-        /// Runs the SaveWatcher until cancelled
+        /// Runs the SaveWatcher until cancelled, triggering the passed in callback whenever a save changes
         /// </summary>
         /// <param name="stoppingToken">The token to cancel the execution</param>
-        public async Task WatchFilesAsync(CancellationToken stoppingToken, Action<string> onSave)
+        /// <param name="onSaveChanged">Action to call upon a Save change being detected, passing in the name of the save</param>
+        public async Task WatchFilesAsync(CancellationToken stoppingToken, Action<string> onSaveChanged)
         {
             var dirWatcher = new FileSystemWatcher(this.settings.SaveDirectory)
             {
@@ -72,7 +73,7 @@ namespace CDDABackup
 
                     // trigger the event
                     this.logger.LogDebug($"Triggering OnSaveChanged: {save}");
-                    onSave(save);
+                    onSaveChanged(save);
 
                     // Mark the save as handled
                     savesHandled.Add(save);

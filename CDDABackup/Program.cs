@@ -1,5 +1,5 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
+using CDDABackup.FileHandling;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -37,6 +37,7 @@ namespace CDDABackup
                             // Run CDDA  core as a background service
                             .AddHostedService<BackupHandler>()
                             .AddTransient<SaveWatcher>()
+                            .AddSingleton<Copier>()
                             .AddOptions<ScummerSettings>().BindConfiguration("CDDABackup");
                     }
                 )

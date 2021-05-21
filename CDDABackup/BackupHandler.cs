@@ -3,6 +3,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Threading;
 using System.Threading.Tasks;
+using CDDABackup.FileHandling;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 
@@ -39,13 +40,19 @@ namespace CDDABackup
         private readonly SaveWatcher saveWatcher;
 
         /// <summary>
+        /// The copier to use to actually create the backup files
+        /// </summary>
+        private readonly Copier fileCopier;
+
+        /// <summary>
         /// Creates a new Backup Handler with the given config
         /// </summary>
         /// <param name="config">The configuration the Handler will pull values from</param>
         /// <param name="hostApplicationLifetime">The application lifetime to call shutdown on when user requests</param>
         /// <param name="saveWatcher">The Watcher that will be used to detect when a backup should be made</param>
+        /// <param name="copier">The Copier that the Handler will use to copy files with</param>
         /// <exception cref="ApplicationException">Thrown when the application is not configured correctly</exception>
-        public BackupHandler(IConfiguration config, IHostApplicationLifetime hostApplicationLifetime, SaveWatcher saveWatcher)
+        public BackupHandler(IConfiguration config, IHostApplicationLifetime hostApplicationLifetime, SaveWatcher saveWatcher, Copier copier)
         {
             this.hostApplicationLifetime = hostApplicationLifetime;
             
@@ -62,6 +69,7 @@ namespace CDDABackup
             }
 
             this.saveWatcher = saveWatcher;
+            this.fileCopier = copier;
         }
         
         /// <summary>
@@ -87,12 +95,8 @@ namespace CDDABackup
                     string backupName = $"{saveName} {now.ToString(timestampFormat)}";
                     string backupPath = Path.Combine(this.backupDirectoryPath, backupName);
                     
-                    // Ensure the back up directory exists
-                    DirectoryInfo targetDirectory = new DirectoryInfo(backupPath);
-                    Directory.CreateDirectory(targetDirectory.FullName);
-                    
                     // Do the backup
-                    this.BackupFolder(sourceDirectory, targetDirectory);
+                    this.fileCopier.CopyDirectory(sourceDirectory, backupPath);
 
                     // Zip it up and remove unzipped version
                     ZipFile.CreateFromDirectory(backupPath, backupPath + ".zip", CompressionLevel.Optimal, false);
@@ -106,28 +110,7 @@ namespace CDDABackup
                 Console.WriteLine(e.Message);
             }
         }
-        
-        /// <summary>
-        /// Takes a given directory and writes an exact copy of all of its contents to the backup directory, recursively.
-        /// </summary>
-        /// <param name="sourceDirectory">The original Directory to Copy</param>
-        /// <param name="backupDirectory">The destination of the Copy</param>
-        private void BackupFolder(DirectoryInfo sourceDirectory, DirectoryInfo backupDirectory)
-        {
-            // Backup all the files
-            foreach (var file in sourceDirectory.GetFiles())
-            {
-                file.CopyTo(Path.Combine(backupDirectory.FullName, file.Name));
-            }
 
-            // Backup all the Directories
-            foreach (var directory in sourceDirectory.GetDirectories())
-            {
-                // Recursion isn't ideal but I highly doubt this will ever be nested enough to stack overflow
-                this.BackupFolder(directory, backupDirectory.CreateSubdirectory(directory.Name));
-            }
-        }
-        
         /// <summary>
         /// Wraps the backup task with control logic
         /// </summary>

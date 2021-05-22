@@ -33,13 +33,7 @@ namespace CDDABackup
                 .ConfigureAppConfiguration(builder => { builder.AddJsonFile("appSettings.json"); })
                 .ConfigureServices((services) =>
                     {
-                        services
-                            // Run CDDA  core as a background service
-                            .AddHostedService<BackupHandler>()
-                            .AddTransient<SaveWatcher>()
-                            .AddSingleton<Copier>()
-                            .AddSingleton<BackupWriter>()
-                            .AddOptions<ScummerSettings>().BindConfiguration("CDDABackup");
+                        services.AddCDDA();
                     }
                 )
                 .ConfigureLogging((hostContext, logging) =>

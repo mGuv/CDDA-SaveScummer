@@ -44,6 +44,10 @@ namespace CDDABackup
             Directory.CreateDirectory(this.settings.BackupDirectory);
         }
 
+        /// <summary>
+        /// Makes a backup of the given save
+        /// </summary>
+        /// <param name="save">The save to backup</param>
         public void BackupSave(string save)
         {
             // Grab the Save Directory

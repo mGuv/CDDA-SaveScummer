@@ -52,10 +52,7 @@ namespace CDDABackup
         {
             try
             {
-                await this.saveWatcher.WatchFilesAsync(stoppingToken, save =>
-                {
-                    this.backupWriter.BackupSave(save);
-                });
+                await this.saveWatcher.WatchFilesAsync(stoppingToken, this.backupWriter.BackupSave);
             }
             catch (Exception e)
             {

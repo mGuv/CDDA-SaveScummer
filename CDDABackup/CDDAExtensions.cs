@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CDDABackup
 {
-    // Extension Method hold
+    // Class for CDDA related extensions
     public static class CDDAExtensions
     {
         /// <summary>

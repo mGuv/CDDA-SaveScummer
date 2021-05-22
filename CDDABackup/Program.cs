@@ -38,6 +38,7 @@ namespace CDDABackup
                             .AddHostedService<BackupHandler>()
                             .AddTransient<SaveWatcher>()
                             .AddSingleton<Copier>()
+                            .AddSingleton<BackupWriter>()
                             .AddOptions<ScummerSettings>().BindConfiguration("CDDABackup");
                     }
                 )

@@ -15,21 +15,6 @@ namespace CDDABackup
     public class BackupHandler : BackgroundService
     {
         /// <summary>
-        /// The core CDDA directory where saves are written to
-        /// </summary>
-        private readonly string saveDirectory;
-
-        /// <summary>
-        /// The directory path that backups are saved to
-        /// </summary>
-        private readonly string backupDirectoryPath;
-
-        /// <summary>
-        /// The timestamp format to attach to each backup
-        /// </summary>
-        private readonly string timestampFormat;
-        
-        /// <summary>
         /// The Application control so we can gracefully request shutdown via user input
         /// </summary>
         private readonly IHostApplicationLifetime hostApplicationLifetime;
@@ -40,36 +25,22 @@ namespace CDDABackup
         private readonly SaveWatcher saveWatcher;
 
         /// <summary>
-        /// The copier to use to actually create the backup files
+        /// The Backup Writer utilised to actually write backups
         /// </summary>
-        private readonly Copier fileCopier;
+        private readonly BackupWriter backupWriter;
 
         /// <summary>
         /// Creates a new Backup Handler with the given config
         /// </summary>
-        /// <param name="config">The configuration the Handler will pull values from</param>
         /// <param name="hostApplicationLifetime">The application lifetime to call shutdown on when user requests</param>
         /// <param name="saveWatcher">The Watcher that will be used to detect when a backup should be made</param>
-        /// <param name="copier">The Copier that the Handler will use to copy files with</param>
+        /// <param name="backupWriter">The Backup Writer that the Handler will use to make backups</param>
         /// <exception cref="ApplicationException">Thrown when the application is not configured correctly</exception>
-        public BackupHandler(IConfiguration config, IHostApplicationLifetime hostApplicationLifetime, SaveWatcher saveWatcher, Copier copier)
+        public BackupHandler(IHostApplicationLifetime hostApplicationLifetime, SaveWatcher saveWatcher, BackupWriter backupWriter)
         {
             this.hostApplicationLifetime = hostApplicationLifetime;
-            
-            // Configure Handler
-            this.saveDirectory = config["CDDABackup:saveDirectory"];
-            this.backupDirectoryPath = saveDirectory + "\\" + config["CDDABackup:backupFolderName"];
-            this.timestampFormat = config["CDDABackup:timestampFormat"];
-            
-            // Check for invalid configuration
-            if (this.saveDirectory.Length == 0)
-            {
-                throw new ApplicationException(
-                    "Save directory has not been set! Please modify the appSettings.json to point 'saveDirectory' to your CDDA save directory.");
-            }
-
             this.saveWatcher = saveWatcher;
-            this.fileCopier = copier;
+            this.backupWriter = backupWriter;
         }
         
         /// <summary>
@@ -81,29 +52,7 @@ namespace CDDABackup
         {
             try
             {
-                // Ensure backup directory exists
-                Directory.CreateDirectory(this.backupDirectoryPath);
-
-                await saveWatcher.WatchFilesAsync(stoppingToken, save =>
-                {
-                    // Save has changed, back up time.
-                    DirectoryInfo sourceDirectory = new DirectoryInfo(save);
-                    
-                    // Build the Backup Name/Path
-                    DateTime now = DateTime.Now;
-                    string saveName = sourceDirectory.Name;
-                    string backupName = $"{saveName} {now.ToString(timestampFormat)}";
-                    string backupPath = Path.Combine(this.backupDirectoryPath, backupName);
-                    
-                    // Do the backup
-                    this.fileCopier.CopyDirectory(sourceDirectory, backupPath);
-
-                    // Zip it up and remove unzipped version
-                    ZipFile.CreateFromDirectory(backupPath, backupPath + ".zip", CompressionLevel.Optimal, false);
-                    Directory.Delete(backupPath, true);
-
-                    Console.WriteLine($"Wrote backup: {backupPath + ".zip"}");
-                });
+                await this.saveWatcher.WatchFilesAsync(stoppingToken, this.backupWriter.BackupSave);
             }
             catch (Exception e)
             {

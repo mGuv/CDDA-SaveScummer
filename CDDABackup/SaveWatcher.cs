@@ -53,7 +53,7 @@ namespace CDDABackup
             };
 
             dirWatcher.Changed += this.OnFileChanged;
-            dirWatcher.Error += (sender, args) =>
+            dirWatcher.Error += (_, args) =>
             {
                 this.logger.LogError(args.GetException(), "Inner Exception thrown in FileWatcher");
             };
